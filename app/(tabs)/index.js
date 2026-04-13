@@ -80,16 +80,16 @@ export default function HomeScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* About Button */}
+        {/* Our Services Button */}
         <TouchableOpacity 
-          onPress={() => router.push('/about')}
+          onPress={() => router.push('/services')}
           style={{ width: '48%', height: 160, backgroundColor: '#E86F21', borderRadius: 16, marginBottom: 16, padding: 16, position: 'relative' }}
           className="shadow-sm"
         >
-          <Ionicons name="information-circle-outline" size={32} color="#FFFFFF" style={{ position: 'absolute', top: 16, left: 16 }} />
+          <Ionicons name="layers-outline" size={32} color="#FFFFFF" style={{ position: 'absolute', top: 16, left: 16 }} />
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 10 }}>
-            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 16, textAlign: 'center' }}>
-              About Us
+            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 16, textAlign: 'center', lineHeight: 22 }}>
+              Our Services
             </Text>
           </View>
         </TouchableOpacity>

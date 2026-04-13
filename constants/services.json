@@ -1,0 +1,70 @@
+[
+  {
+    "id": "1",
+    "title": "Catering Services",
+    "icon": "restaurant-outline",
+    "description": "Delicious food and beverage services for your campus functions. From small snacks to full buffet meals.",
+    "details": [
+      { "item": "Standard Lunch Box", "price": "৳ 120 / person" },
+      { "item": "Premium Buffet Setup", "price": "৳ 450 / person" },
+      { "item": "Snacks & Tea Package", "price": "৳ 50 / person" },
+      { "item": "VIP Event Catering", "price": "৳ 800 / person" }
+    ]
+  },
+  {
+    "id": "2",
+    "title": "Sound System",
+    "icon": "volume-medium-outline",
+    "description": "High-quality audio equipment rental for any event size, ensuring your voice is heard loud and clear.",
+    "details": [
+      { "item": "Basic Mic & 2 Speakers", "price": "৳ 1,000 / day" },
+      { "item": "Standard Function Setup", "price": "৳ 3,500 / day" },
+      { "item": "DJ Sound Setup", "price": "৳ 5,000 / day" },
+      { "item": "Live Concert Audio Array", "price": "৳ 15,000 / day" }
+    ]
+  },
+  {
+    "id": "3",
+    "title": "Host Management",
+    "icon": "mic-outline",
+    "description": "Professional anchors and event hosts from our talented student pool to keep your audience engaged.",
+    "details": [
+      { "item": "Student Anchor (Basic)", "price": "৳ 500 / event" },
+      { "item": "Experienced Host", "price": "৳ 1,500 / event" },
+      { "item": "Professional Guest Anchor", "price": "৳ 5,000+ / event" }
+    ]
+  },
+  {
+    "id": "4",
+    "title": "Function Design",
+    "icon": "color-palette-outline",
+    "description": "Creative stage, lighting, and thematic design tailored specifically to your function's requirements.",
+    "details": [
+      { "item": "Basic Stage Setup", "price": "৳ 2,000" },
+      { "item": "Backdrop & Lighting", "price": "৳ 4,500" },
+      { "item": "Premium Theme Design", "price": "৳ 10,000" }
+    ]
+  },
+  {
+    "id": "5",
+    "title": "Photography & Video",
+    "icon": "camera-outline",
+    "description": "Capture the best moments of your event with our skilled campus photographers and videographers.",
+    "details": [
+      { "item": "Standard Photography", "price": "৳ 1,500 / day" },
+      { "item": "Cinematic Videography", "price": "৳ 4,000 / day" },
+      { "item": "Drone Footage (Permit Req.)", "price": "৳ 8,000 / day" }
+    ]
+  },
+  {
+    "id": "6",
+    "title": "Venue Decoration",
+    "icon": "rose-outline",
+    "description": "Beautiful floral and aesthetic decorations to bring your event venue to life.",
+    "details": [
+      { "item": "Floral Entrance Arch", "price": "৳ 1,200" },
+      { "item": "Full Hall Decoration", "price": "৳ 5,000" },
+      { "item": "Table & Seat Arrangements", "price": "৳ 2,500" }
+    ]
+  }
+]
