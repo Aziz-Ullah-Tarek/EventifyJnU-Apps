@@ -1,12 +1,41 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import auth from '@react-native-firebase/auth';
+import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const [emailId, setEmailId] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!emailId || !password) {
+      Toast.show({ type: 'error', text1: 'Missing fields', text2: 'Please fill in both email and password.' });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      let processingEmail = emailId;
+      if (!emailId.includes('@')) {
+        processingEmail = `${emailId}@jnu.ac.bd`;
+      }
+
+      await auth().signInWithEmailAndPassword(processingEmail, password);
+      
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
+      router.push('/(tabs)');
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Login failed', text2: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }} className="bg-white">
@@ -15,108 +44,117 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
         className="flex-1"
       >
-        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center' }}>
-          
-          <View className="mb-10 items-center mt-8">
-            <View className="bg-[#E86F21] rounded-full p-4 mb-4">
-              <Ionicons name="log-in-outline" size={48} color="#FFFFFF" />
+        <ScrollView 
+          contentContainerStyle={{ flexGrow: 1, padding: 24, justifyContent: 'center' }}
+          showsVerticalScrollIndicator={false}
+        >
+          <View className="w-full max-w-md self-center">
+            
+            <View className="mb-10 items-center mt-8">
+              <View className="bg-orange-500 rounded-full p-5 mb-6 shadow-md shadow-orange-200">
+                <Ionicons name="log-in-outline" size={48} color="#FFFFFF" />
+              </View>
+              <View className="flex-row items-center mb-2">
+                <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-[#0E3B6E] text-4xl">Welcome </Text>
+                <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-orange-500 text-4xl">Back!</Text>
+              </View>
+              <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-500 text-base text-center px-4 leading-6">
+                Login to your EventifyJNU account to discover and manage campus events.
+              </Text>
             </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-              <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#0E3B6E', fontSize: 32 }}>Welcome </Text>
-              <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#E86F21', fontSize: 32 }}>Back!</Text>
-            </View>
-            <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-500 text-sm mb-2 text-center px-4">
-              Login to your EventifyJNU account to discover and manage campus events.
-            </Text>
-          </View>
 
-          <View className="mb-6">
-            <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-700 text-sm mb-2 ml-1">
-              Email Address / Student ID
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-xl bg-gray-50 px-4 py-3">
-              <Ionicons name="mail-outline" size={20} color="#0E3B6E" className="mr-3" />
-              <TextInput 
-                placeholder="Enter your email or ID"
-                placeholderTextColor="#A0AEC0"
-                className="flex-1 text-base text-gray-800 h-10"
-                style={{ fontFamily: 'Poppins_400Regular' }}
-                autoCapitalize="none"
-              />
+            <View className="mb-5">
+              <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-700 text-sm mb-2 ml-1 font-medium">
+                Email Address / Student ID
+              </Text>
+              <View className="flex-row items-center border border-gray-200 rounded-2xl bg-gray-50 px-4 py-3.5 focus:border-[#0E3B6E] focus:bg-white shadow-sm transition">
+                <Ionicons name="mail-outline" size={22} color="#64748b" className="mr-3" />
+                <TextInput 
+                  placeholder="Enter your email or ID"
+                  placeholderTextColor="#94a3b8"
+                  value={emailId}
+                  onChangeText={setEmailId}
+                  className="flex-1 text-base text-gray-800 h-10"
+                  style={{ fontFamily: 'Poppins_400Regular' }}
+                  autoCapitalize="none"
+                />
+              </View>
             </View>
-          </View>
 
-          <View className="mb-4">
-            <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-700 text-sm mb-2 ml-1">
-              Password
-            </Text>
-            <View className="flex-row items-center border border-gray-300 rounded-xl bg-gray-50 px-4 py-3">
-              <Ionicons name="lock-closed-outline" size={20} color="#0E3B6E" className="mr-3" />
-              <TextInput 
-                placeholder="Enter your password"
-                placeholderTextColor="#A0AEC0"
-                secureTextEntry={!showPassword}
-                className="flex-1 text-base text-gray-800 h-10"
-                style={{ fontFamily: 'Poppins_400Regular' }}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={20} color="#0E3B6E" />
+            <View className="mb-4">
+              <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-700 text-sm mb-2 ml-1 font-medium">
+                Password
+              </Text>
+              <View className="flex-row items-center border border-gray-200 rounded-2xl bg-gray-50 px-4 py-3.5 focus:border-[#0E3B6E] focus:bg-white shadow-sm transition">
+                <Ionicons name="lock-closed-outline" size={22} color="#64748b" className="mr-3" />
+                <TextInput 
+                  placeholder="Enter your password"
+                  placeholderTextColor="#94a3b8"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  className="flex-1 text-base text-gray-800 h-10"
+                  style={{ fontFamily: 'Poppins_400Regular' }}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-1">
+                  <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={22} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View className="flex-row justify-end mb-8 mt-1">
+              <TouchableOpacity>
+                <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-[#0E3B6E] text-sm font-medium">
+                  Forgot Password?
+                </Text>
               </TouchableOpacity>
             </View>
-          </View>
 
-          <View className="flex-row justify-end mb-8 mt-2">
-            <TouchableOpacity>
-              <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-[#0E3B6E] text-sm">
-                Forgot Password?
+            <TouchableOpacity 
+              className="bg-[#0E3B6E] py-4 rounded-2xl mb-6 shadow-lg shadow-blue-900/30 items-center active:bg-blue-900"
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                 <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-white text-lg tracking-wide">
+                  Login to EventifyJNU
+                </Text>
+              )}
+            </TouchableOpacity>
+
+            {/* Social Divider */}
+            <View className="flex-row items-center my-4">
+              <View className="flex-1 h-[1px] bg-gray-200" />
+              <Text style={{ fontFamily: 'Poppins_400Regular' }} className="mx-4 text-gray-400 text-sm">
+                Or continue with
+              </Text>
+              <View className="flex-1 h-[1px] bg-gray-200" />
+            </View>
+
+            {/* Google Login Button */}
+            <TouchableOpacity 
+              className="bg-white border border-gray-200 flex-row items-center justify-center py-3.5 rounded-2xl mb-8 shadow-sm active:bg-gray-50"
+            >
+              <Ionicons name="logo-google" size={24} color="#DB4437" style={{ marginRight: 12 }} />
+              <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-gray-700 text-base">
+                Sign in with Google
               </Text>
             </TouchableOpacity>
-          </View>
 
-          <TouchableOpacity 
-            style={{ backgroundColor: '#0E3B6E' }} 
-            className="py-4 rounded-xl mb-4 shadow-md items-center"
-            onPress={() => router.push('/(tabs)')}
-          >
-            <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-white text-lg tracking-wide">
-              Login
-            </Text>
-          </TouchableOpacity>
-          {/* Social Divider */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 16 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-            <Text style={{ fontFamily: 'Poppins_400Regular', marginHorizontal: 12, color: '#A0AEC0', fontSize: 13 }}>Or continue with</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-          </View>
-
-          {/* Google Login Button */}
-          <TouchableOpacity 
-            style={{ 
-              backgroundColor: '#FFFFFF', 
-              borderWidth: 1, 
-              borderColor: '#E2E8F0',
-              flexDirection: 'row', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-            }} 
-            className="py-3 rounded-xl mb-6 shadow-sm"
-          >
-            <Ionicons name="logo-google" size={22} color="#DB4437" style={{ marginRight: 10 }} />
-            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#4A5568', fontSize: 16 }}>
-              Continue with Google
-            </Text>
-          </TouchableOpacity>
-          <View className="flex-row justify-center mt-6">
-            <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-600 text-sm">
-              Don&apos;t have an account?{' '}
-            </Text>
-            <TouchableOpacity onPress={() => router.push('/register')}>
-              <Text style={{ fontFamily: 'Poppins_700Bold' }} className="text-[#E86F21] text-sm">
-                Register Here
+            <View className="flex-row justify-center pb-8">
+              <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-600 text-base">
+                Don&apos;t have an account?{' '}
               </Text>
-            </TouchableOpacity>
+              <TouchableOpacity onPress={() => router.push('/register')}>
+                <Text style={{ fontFamily: 'Poppins_700Bold' }} className="text-orange-500 text-base">
+                  Register Here
+                </Text>
+              </TouchableOpacity>
+            </View>
+
           </View>
-          
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

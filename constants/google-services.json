@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "251472111113",
+    "project_id": "eventifyjnu",
+    "storage_bucket": "eventifyjnu.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:251472111113:android:108d3ba0646d1b39e47ad8",
+        "android_client_info": {
+          "package_name": "com.eventifyjnu.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-_WqKTvfkl62nOJF1RcgxamSoJ8uBfEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
