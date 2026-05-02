@@ -33,6 +33,18 @@ export default function MenuScreen() {
         {/* Divider */}
         <View style={{ height: 1, backgroundColor: '#FFFFFF', opacity: 0.1, marginBottom: 30 }} />
 
+        {/* Dashboard Menu Item */}
+        <TouchableOpacity 
+          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
+          onPress={() => { router.back(); router.push('/dashboard'); }}
+        >
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+            <Ionicons name="grid-outline" size={20} color="#E86F21" />
+          </View>
+          <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Dashboard</Text>
+          <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
+
         {/* Login Menu Item */}
         <TouchableOpacity 
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}

@@ -68,21 +68,20 @@ export default function TabLayout() {
         }} 
       />
       <Tabs.Screen 
-        name="login" 
+        name="events" 
         options={{ 
-          title: 'Login', 
-          tabBarLabel: 'Login',
-          href: '/login',
-          tabBarIcon: ({ color, size }) => <Ionicons name="log-in-outline" size={28} color={color} />
+          title: 'Events', 
+          tabBarLabel: 'Events',
+          href: '/events',
+          tabBarIcon: ({ color, size }) => <Ionicons name="compass" size={28} color={color} />
         }} 
       />
       <Tabs.Screen 
-        name="register" 
+        name="tickets" 
         options={{ 
-          title: 'Register', 
-          tabBarLabel: 'Register',
-          href: '/register',
-          tabBarIcon: ({ color, size }) => <Ionicons name="person-add-outline" size={26} color={color} />
+          title: 'Tickets', 
+          tabBarLabel: 'Tickets',
+          tabBarIcon: ({ color, size }) => <Ionicons name="ticket" size={26} color={color} />
         }} 
       />
     </Tabs>

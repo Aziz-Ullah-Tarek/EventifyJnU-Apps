@@ -1,18 +1,21 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 const cardWidth = (width - 48) / 2; // 32px padding total + 16px gap
 
 const links = [
-  { id: 1, title: 'Upcoming Events', icon: 'event', iconLib: 'MaterialIcons', color: '#097C87', bg: '#E6F4F1' },
-  { id: 2, title: 'My Tickets', icon: 'ticket-alt', iconLib: 'FontAwesome5', color: '#FCA47C', bg: '#FFF1E8' },
-  { id: 3, title: 'Host Event', icon: 'add-circle', iconLib: 'MaterialIcons', color: '#23CED9', bg: '#E4F9FA' },
-  { id: 4, title: 'Clubs & Societies', icon: 'people', iconLib: 'Ionicons', color: '#F9D779', bg: '#FFFCE8' },
+  { id: 1, title: 'Upcoming Events', icon: 'event', iconLib: 'MaterialIcons', color: '#097C87', bg: '#E6F4F1', route: '/(tabs)/events' },
+  { id: 2, title: 'Volunteering', icon: 'hand-right', iconLib: 'Ionicons', color: '#E86F21', bg: '#FFF1E8', route: '/volunteer' },
+  { id: 3, title: 'Host Event', icon: 'add-circle', iconLib: 'MaterialIcons', color: '#23CED9', bg: '#E4F9FA', route: '/services' },
+  { id: 4, title: 'My Bookings', icon: 'ticket', iconLib: 'Ionicons', color: '#F9D779', bg: '#FFFCE8', route: '/my-bookings' },
 ];
 
 export default function QuickLinks() {
+  const router = useRouter();
+
   return (
     <View className="mb-2">
       <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-xl text-[#097C87] mb-4 px-1 tracking-tight">
@@ -22,6 +25,7 @@ export default function QuickLinks() {
         {links.map((item) => (
           <TouchableOpacity 
             key={item.id} 
+            onPress={() => router.push(item.route)}
             style={{ width: cardWidth, borderWidth: 1, borderColor: '#F3F4F6' }} 
             className="bg-white p-5 rounded-2xl shadow-sm mb-4 items-center justify-center elevation-2"
           >

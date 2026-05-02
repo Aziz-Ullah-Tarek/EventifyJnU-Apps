@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import Toast from 'react-native-toast-message';
 
 // Adjust localhost for Android Emulator if tracking native Android
-const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -21,7 +21,7 @@ export default function HomeScreen() {
   const fetchEvents = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/events`);
+      const response = await fetch(`${API_BASE_URL}/events`);
       if (!response.ok) throw new Error('Failed to fetch events');
       const data = await response.json();
       setEvents(data);

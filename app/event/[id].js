@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator, Platform, Alert } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, ActivityIndicator, Dimensions, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Toast from 'react-native-toast-message';
+import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 
-const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000' : 'http://localhost:5000';
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 
 export default function EventDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -20,30 +20,20 @@ export default function EventDetailsScreen() {
   const fetchEventDetails = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/events/${id}`);
+      const response = await fetch(`${API_BASE_URL}/events/${id}`);
       if (!response.ok) throw new Error('Failed to fetch event');
       const data = await response.json();
       setEvent(data);
     } catch (error) {
       console.log('Fetch error:', error);
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Could not load event details.' });
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegister = () => {
-    // Navigate to a dedicated registration/payment screen later
-    Toast.show({ 
-      type: 'success', 
-      text1: 'Registration Initiated', 
-      text2: 'Redirecting to booking layout...' 
-    });
-  };
-
   if (loading) {
     return (
-      <View className="flex-1 bg-white items-center justify-center">
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#E86F21" />
       </View>
     );
@@ -51,136 +41,182 @@ export default function EventDetailsScreen() {
 
   if (!event) {
     return (
-      <View className="flex-1 bg-white items-center justify-center p-4">
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
         <Ionicons name="alert-circle-outline" size={60} color="#D1D5DB" />
-        <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-gray-500 mt-4 text-center">Event not found.</Text>
-        <TouchableOpacity onPress={() => router.back()} className="mt-4 p-3 bg-gray-100 rounded-lg">
+        <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#6B7280', marginTop: 16 }}>Event not found.</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16, padding: 12, backgroundColor: '#F3F4F6', borderRadius: 8 }}>
           <Text style={{ fontFamily: 'Poppins_400Regular' }}>Go Back</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
+  const progress = (event.registeredCount / event.capacity) * 100;
+
   return (
-    <View className="flex-1 bg-white">
-      <StatusBar style="light" />
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
+      <StatusBar style="light" backgroundColor="transparent" translucent />
       
-      <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-        {/* Header Image */}
-        <View className="relative w-full h-72">
-          <Image 
-            source={{ uri: event.imageUrl || 'https://via.placeholder.com/600x300' }} 
-            className="w-full h-full"
-            resizeMode="cover"
-          />
-          {/* Overlay gradient for readability */}
-          <View className="absolute inset-0 bg-black/30" />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Hero Image */}
+        <View style={{ position: 'relative' }}>
+          <Image source={{ uri: event.imageUrl }} style={{ width: SCREEN_WIDTH, height: 300 }} resizeMode="cover" />
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.3)' }} />
           
-          {/* Custom Back Button */}
-          <View className="absolute top-12 left-5 z-10 w-10 h-10 shadow-sm bg-white/20 rounded-full overflow-hidden border border-white/10" style={{ backdropFilter: 'blur(10px)' }}>
-            <TouchableOpacity 
-              onPress={() => router.back()}
-              className="flex-1 items-center justify-center"
-            >
-              <Ionicons name="chevron-back" size={24} color="white" />
-            </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={{ position: 'absolute', top: 40, left: 20, width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 22, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+
+          <View style={{ position: 'absolute', bottom: 20, left: 20, right: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+              <View style={{ backgroundColor: '#E86F21', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, marginRight: 10 }}>
+                <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 12 }}>{event.isPaid ? 'Paid' : 'Free'}</Text>
+              </View>
+              <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 18 }}>{event.isPaid ? `৳${event.price}` : 'FREE'}</Text>
+            </View>
+            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 26, lineHeight: 32 }} numberOfLines={2}>
+              {event.title}
+            </Text>
           </View>
         </View>
 
-        {/* Content Body */}
-        <View className="px-5 pt-6 pb-32 bg-white rounded-t-3xl -mt-6">
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="bg-orange-50 px-3 py-1.5 rounded-full border border-orange-100">
-              <Text style={{ fontFamily: 'Poppins_700Bold' }} className="text-orange-600 text-xs tracking-wider uppercase">
-                {event.organizer}
-              </Text>
+        {/* Details Section */}
+        <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, padding: 24, minHeight: 400 }}>
+          
+          {/* Info Row */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Ionicons name="calendar" size={24} color="#0E3B6E" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 12 }}>Date</Text>
+                <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#1F2937', fontSize: 14, marginTop: 2 }}>{new Date(event.date).toLocaleDateString()}</Text>
+              </View>
             </View>
-            <Text style={{ fontFamily: 'Montserrat_700Bold' }} className={event.isPaid ? "text-[#0E3B6E] text-xl" : "text-green-600 text-xl"}>
-              {event.isPaid ? `৳${event.price}` : 'FREE'}
+            
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', marginLeft: 10 }}>
+              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Ionicons name="location" size={24} color="#E86F21" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 12 }}>Venue</Text>
+                <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#1F2937', fontSize: 14, marginTop: 2 }}>{event.location}</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Organizer */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#0E3B6E', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="people" size={20} color="#FFFFFF" />
+            </View>
+            <View style={{ marginLeft: 12 }}>
+              <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 13 }}>Organized by</Text>
+              <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#1F2937', fontSize: 15 }}>{event.organizer}</Text>
+            </View>
+          </View>
+
+          {/* About */}
+          <View style={{ marginTop: 24 }}>
+            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#1F2937', fontSize: 18, marginBottom: 12 }}>About Event</Text>
+            <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 15, lineHeight: 24 }}>
+              {event.description}
             </Text>
           </View>
 
-          <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-2xl text-gray-800 mb-6 leading-8">
-            {event.title}
-          </Text>
-
-          {/* Info Rows */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-6">
-            <View className="flex-row items-center mb-4">
-              <View className="w-10 h-10 rounded-full bg-blue-100 items-center justify-center mr-3">
-                <Ionicons name="calendar" size={20} color="#0E3B6E" />
-              </View>
-              <View>
-                <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-500 text-xs">Date & Time</Text>
-                <Text style={{ fontFamily: 'Poppins_700Bold' }} className="text-gray-800 text-sm">
-                  {new Date(event.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </Text>
-                <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-600 text-xs">
-                  {new Date(event.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
-            </View>
-
-            <View className="flex-row items-center">
-              <View className="w-10 h-10 rounded-full bg-orange-100 items-center justify-center mr-3">
-                <Ionicons name="location" size={20} color="#D95E16" />
-              </View>
-              <View>
-                <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-500 text-xs">Location</Text>
-                <Text style={{ fontFamily: 'Poppins_700Bold' }} className="text-gray-800 text-sm">
-                  {event.location}
-                </Text>
-                <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-600 text-xs">
-                  Jagannath University Campus
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Description Section */}
-          <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-gray-800 text-lg mb-2 mt-4">
-            About this Event
-          </Text>
-          <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-600 text-sm leading-relaxed mb-6">
-            {event.description}
-          </Text>
-
           {/* Capacity Progress */}
-          <View className="bg-white border border-gray-100 p-4 rounded-2xl shadow-sm mb-6 mt-4">
-            <View className="flex-row justify-between mb-2">
-              <Text style={{ fontFamily: 'Poppins_700Bold' }} className="text-gray-700 text-sm">Capacity</Text>
-              <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-500 text-sm">
-                {event.registeredCount} / {event.capacity} registered
-              </Text>
+          <View style={{ marginTop: 30, backgroundColor: '#F8F9FA', padding: 16, borderRadius: 16 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#1F2937', fontSize: 14 }}>Event Capacity</Text>
+              <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#0E3B6E', fontSize: 14 }}>{event.registeredCount} / {event.capacity}</Text>
             </View>
-            <View className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-              <View 
-                className="h-full bg-orange-500 rounded-full" 
-                style={{ width: `${Math.min((event.registeredCount / event.capacity) * 100, 100)}%` }} 
-              />
+            <View style={{ height: 8, backgroundColor: '#E5E7EB', borderRadius: 4, overflow: 'hidden' }}>
+              <View style={{ height: '100%', width: `${progress}%`, backgroundColor: progress > 90 ? '#E83F3F' : '#0E3B6E', borderRadius: 4 }} />
             </View>
+            <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 12, marginTop: 8 }}>
+              {event.capacity - event.registeredCount} seats remaining
+            </Text>
           </View>
+
+          {/* Volunteer Hiring Section */}
+          {event.hiringVolunteers && (
+            <View style={{ marginTop: 32 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ backgroundColor: '#E86F21', padding: 8, borderRadius: 8, marginRight: 12 }}>
+                  <Ionicons name="hand-right" size={20} color="#FFFFFF" />
+                </View>
+                <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#1F2937', fontSize: 18 }}>We are hiring Volunteers!</Text>
+              </View>
+
+              {event.volunteerRoles?.map((v, index) => (
+                <View key={index} style={{ backgroundColor: '#F0F9FF', borderRadius: 16, padding: 20, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: '#0E3B6E' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#0E3B6E', fontSize: 16 }}>{v.role}</Text>
+                    <View style={{ backgroundColor: '#0E3B6E', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                      <Text style={{ fontFamily: 'Poppins_600SemiBold', color: '#FFFFFF', fontSize: 10 }}>{v.spots - v.filledSpots} SPOTS LEFT</Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Role:</Text>
+                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 13, marginBottom: 12 }}>{v.description}</Text>
+                  
+                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Requirements & Skills:</Text>
+                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 13, marginBottom: 12 }}>{v.requirements}</Text>
+                  
+                  {v.schedule && (
+                    <>
+                      <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Work Schedule:</Text>
+                      <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 13, marginBottom: 12 }}>{v.schedule}</Text>
+                    </>
+                  )}
+
+                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Benefits & Rewards:</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {v.benefits.split(',').map((benefit, bIdx) => (
+                      <View key={bIdx} style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
+                        <Ionicons name="gift-outline" size={14} color="#059669" style={{ marginRight: 4 }} />
+                        <Text style={{ fontFamily: 'Poppins_600SemiBold', color: '#059669', fontSize: 11 }}>{benefit.trim()}</Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <TouchableOpacity 
+                    onPress={() => router.push({
+                      pathname: '/volunteer-apply',
+                      params: { eventId: event._id, role: v.role }
+                    })}
+                    style={{ backgroundColor: '#0E3B6E', marginTop: 16, paddingVertical: 10, borderRadius: 8, alignItems: 'center' }}
+                  >
+                    <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 14 }}>Apply as {v.role}</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+
         </View>
       </ScrollView>
 
-      {/* Fixed Bottom Action Bar */}
-      <View className="absolute bottom-0 left-0 right-0 pb-8 pt-4 px-5 bg-white flex-row items-center justify-between" style={{ borderTopWidth: 1, borderTopColor: '#f3f4f6', elevation: 20, shadowColor: '#000', shadowOffset: { height: -4, width: 0 }, shadowOpacity: 0.05, shadowRadius: 10 }}>
+      {/* Sticky Bottom Footer */}
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingTop: 16, paddingBottom: 30, borderTopWidth: 1, borderTopColor: '#F3F4F6', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <View>
-          <Text style={{ fontFamily: 'Poppins_400Regular' }} className="text-gray-500 text-xs tracking-wider uppercase mb-1">Total Price</Text>
-          <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-[#0E3B6E] text-2xl">
-             {event.isPaid ? `৳ ${event.price}` : 'FREE'}
-          </Text>
+          <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 13 }}>Total Price</Text>
+          <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#0E3B6E', fontSize: 22 }}>{event.isPaid ? `৳${event.price}` : 'FREE'}</Text>
         </View>
         <TouchableOpacity 
-          className="bg-[#D95E16] px-8 py-3.5 rounded-xl items-center justify-center flex-row shadow-md active:bg-orange-700"
-          onPress={handleRegister}
+          onPress={() => router.push({
+            pathname: "/event-booking",
+            params: { id: event._id }
+          })}
+          style={{ backgroundColor: '#E86F21', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12, shadowColor: '#E86F21', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}
         >
-          <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-white text-base mr-2 tracking-wide">
-            Register Now
-          </Text>
-          <Ionicons name="arrow-forward" size={18} color="white" />
+          <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 16 }}>Register Now</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
