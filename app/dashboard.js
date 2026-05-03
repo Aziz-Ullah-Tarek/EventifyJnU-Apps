@@ -4,14 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import auth from '@react-native-firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from '../constants/firebase';
 import Toast from 'react-native-toast-message';
 
-const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const [user, setUser] = useState(null);
+  const [dbUser, setDbUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
@@ -21,25 +23,31 @@ export default function DashboardScreen() {
   });
 
   useEffect(() => {
-    // Check if firebase is initialized
-    let subscriber;
-    try {
-      subscriber = auth().onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
         setUser(user);
-        if (user) {
-          fetchDashboardData(user.email);
-        } else {
-          setLoading(false);
-          // router.replace('/login'); // Commented out to prevent redirect before firebase setup
-        }
-      });
-    } catch (e) {
-      console.warn("Firebase not initialized yet. Showing guest dashboard.");
-      setLoading(false);
-    }
+        await fetchUserFromDb(user.email);
+        fetchDashboardData(user.email);
+      } else {
+        setLoading(false);
+        router.replace('/login');
+      }
+    });
     
-    return subscriber ? subscriber : undefined;
+    return unsubscribe;
   }, []);
+
+  const fetchUserFromDb = async (email) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/users/${email}`);
+      if (response.ok) {
+        const data = await response.json();
+        setDbUser(data);
+      }
+    } catch (error) {
+      console.error('Error fetching user from DB:', error);
+    }
+  };
 
   const fetchDashboardData = async (email) => {
     try {
@@ -49,26 +57,37 @@ export default function DashboardScreen() {
       const appData = await appRes.json();
 
       // Fetch room bookings
-      const bookRes = await fetch(`${API_BASE_URL}/bookings/user/${email}`);
+      const bookRes = await fetch(`${API_BASE_URL}/bookings?userId=${email}`); // Corrected parameter based on index.js
       const bookData = await bookRes.json();
 
       setStats({
         applications: Array.isArray(appData) ? appData : [],
         bookings: Array.isArray(bookData) ? bookData : [],
-        events: [] // Could be extended to show registered events if that model existed
+        events: [] 
       });
     } catch (error) {
       console.error('Dashboard fetch error:', error);
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to load dashboard data.' });
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      router.replace('/login');
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Sign out failed', text2: error.message });
+    }
+  };
+
   const onRefresh = () => {
     setRefreshing(true);
-    if (user) fetchDashboardData(user.email);
+    if (user) {
+      fetchUserFromDb(user.email);
+      fetchDashboardData(user.email);
+    }
   };
 
   if (loading && !refreshing) {
@@ -88,14 +107,10 @@ export default function DashboardScreen() {
         <TouchableOpacity onPress={() => router.push('/menu')}>
           <Ionicons name="menu-outline" size={28} color="#0E3B6E" />
         </TouchableOpacity>
-        <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 18, color: '#0E3B6E' }}>Student Dashboard</Text>
-        <TouchableOpacity onPress={() => {
-          try {
-            auth().signOut();
-          } catch(e) {
-            router.replace('/login');
-          }
-        }}>
+        <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 18, color: '#0E3B6E' }}>
+          {dbUser?.role === 'admin' ? 'Admin Dashboard' : dbUser?.role === 'moderator' ? 'Moderator Dashboard' : 'Student Dashboard'}
+        </Text>
+        <TouchableOpacity onPress={handleSignOut}>
           <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
         </TouchableOpacity>
       </View>
@@ -104,21 +119,68 @@ export default function DashboardScreen() {
         contentContainerStyle={{ padding: 20 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
+        {/* Sign Out Button (Extra) */}
+        <TouchableOpacity 
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF5F5', padding: 12, borderRadius: 15, marginBottom: 20, borderStyle: 'solid', borderWidth: 1, borderColor: '#FED7D7' }}
+          onPress={handleSignOut}
+        >
+          <Ionicons name="power-outline" size={20} color="#FF4D4D" style={{ marginRight: 8 }} />
+          <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FF4D4D' }}>Log Out</Text>
+        </TouchableOpacity>
+
         {/* User Profile Card */}
-        <View style={{ backgroundColor: '#0E3B6E', borderRadius: 24, padding: 25, flexDirection: 'row', alignItems: 'center', marginBottom: 25, shadowColor: '#0E3B6E', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 15, elevation: 8 }}>
-          <View style={{ width: 70, height: 70, borderRadius: 35, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 20, borderWidth: 2, borderColor: '#FFFFFF' }}>
-            <Ionicons name="person" size={40} color="#FFFFFF" />
+        <View style={{ backgroundColor: '#0E3B6E', borderRadius: 28, padding: 25, flexDirection: 'row', alignItems: 'center', marginBottom: 25, shadowColor: '#0E3B6E', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.3, shadowRadius: 18, elevation: 12 }}>
+          <View style={{ 
+            width: 80, 
+            height: 80, 
+            borderRadius: 40, 
+            backgroundColor: 'rgba(255,255,255,0.15)', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            marginRight: 20, 
+            borderWidth: 2, 
+            borderColor: 'rgba(255,255,255,0.5)',
+            overflow: 'hidden'
+          }}>
+            { (dbUser?.photoURL || user?.photoURL) ? (
+              <Image 
+                key={dbUser?.photoURL || user?.photoURL}
+                source={{ uri: dbUser?.photoURL || user?.photoURL }} 
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Ionicons name="person" size={45} color="#FFFFFF" />
+            )}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 22 }}>
-              {user?.displayName || (user ? 'Student User' : 'Guest User')}
+            <Text 
+              numberOfLines={1} 
+              style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 24, letterSpacing: -0.5 }}
+            >
+              {dbUser?.name || user?.displayName || 'Eventify User'}
             </Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-              <View style={{ backgroundColor: '#E86F21', paddingHorizontal: 10, paddingVertical: 2, borderRadius: 10, marginRight: 8 }}>
-                <Text style={{ color: '#FFFFFF', fontSize: 10, fontFamily: 'Poppins_700Bold' }}>{user ? 'STUDENT' : 'GUEST'}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
+              <View style={{ 
+                backgroundColor: dbUser?.role === 'admin' ? '#ef4444' : dbUser?.role === 'moderator' ? '#8b5cf6' : '#E86F21', 
+                paddingHorizontal: 12, 
+                paddingVertical: 3, 
+                borderRadius: 12, 
+                marginRight: 10,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+              }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 11, fontFamily: 'Poppins_700Bold', letterSpacing: 0.5 }}>
+                  {(dbUser?.role || 'STUDENT').toUpperCase()}
+                </Text>
               </View>
-              <Text style={{ fontFamily: 'Poppins_400Regular', color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-                {user?.email || 'Login to see your data'}
+              <Text 
+                numberOfLines={1} 
+                style={{ fontFamily: 'Poppins_400Regular', color: 'rgba(255,255,255,0.85)', fontSize: 13, flex: 1 }}
+              >
+                {dbUser?.email || user?.email || 'No email data'}
               </Text>
             </View>
           </View>

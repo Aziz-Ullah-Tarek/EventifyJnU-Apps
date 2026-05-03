@@ -3,7 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, SafeAreaView, KeyboardAvoiding
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import auth from '@react-native-firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../constants/firebase';
 import Toast from 'react-native-toast-message';
 
 export default function LoginScreen() {
@@ -26,12 +27,74 @@ export default function LoginScreen() {
         processingEmail = `${emailId}@jnu.ac.bd`;
       }
 
-      await auth().signInWithEmailAndPassword(processingEmail, password);
+      const userCredential = await signInWithEmailAndPassword(auth, processingEmail, password);
+      const user = userCredential.user;
+
+      // Sync user with Backend MongoDB
+      try {
+        const syncResponse = await fetch('https://eventify-jnu-backend.vercel.app/api/users/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            name: user.displayName || user.email.split('@')[0],
+            photoURL: user.photoURL || '',
+          }),
+        });
+        if (!syncResponse.ok) {
+          // If Vercel fails, try local as fallback
+          await fetch('http://localhost:5000/api/users/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email, name: user.displayName, photoURL: user.photoURL }),
+          });
+        }
+      } catch (syncError) {
+        // Final fallback to localhost
+        try {
+          await fetch('http://localhost:5000/api/users/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: user.email, name: user.displayName, photoURL: user.photoURL }),
+          });
+        } catch(e) {}
+      }
       
       Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
-      router.push('/(tabs)');
+      router.replace('/(tabs)');
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Login failed', text2: error.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Sync user with Backend MongoDB
+      try {
+        const syncResponse = await fetch('http://localhost:5000/api/users/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            name: user.displayName,
+            photoURL: user.photoURL,
+          }),
+        });
+        if (!syncResponse.ok) console.error('Sync failed:', await syncResponse.text());
+      } catch (syncError) {
+        console.error('Failed to sync user with DB:', syncError);
+      }
+      
+      Toast.show({ type: 'success', text1: 'Success', text2: `Welcome ${user.displayName}!` });
+      router.replace('/(tabs)');
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Google Login failed', text2: error.message });
     } finally {
       setLoading(false);
     }
@@ -136,6 +199,8 @@ export default function LoginScreen() {
             {/* Google Login Button */}
             <TouchableOpacity 
               className="bg-white border border-gray-200 flex-row items-center justify-center py-3.5 rounded-2xl mb-8 shadow-sm active:bg-gray-50"
+              onPress={handleGoogleLogin}
+              disabled={loading}
             >
               <Ionicons name="logo-google" size={24} color="#DB4437" style={{ marginRight: 12 }} />
               <Text style={{ fontFamily: 'Montserrat_700Bold' }} className="text-gray-700 text-base">

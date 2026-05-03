@@ -3,13 +3,17 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 import { View, Platform, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import '../global.css';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useFonts, Montserrat_400Regular, Montserrat_700Bold } from '@expo-google-fonts/montserrat';
 import { Poppins_400Regular, Poppins_700Bold } from '@expo-google-fonts/poppins';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter, useSegments } from 'expo-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../constants/firebase';
 
 export const unstable_settings = {
   anchor: '(tabs)',
@@ -17,6 +21,28 @@ export const unstable_settings = {
 
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync();
+}
+
+/**
+ * Auth Guard Component to handle protected routes
+ */
+function useProtectedRoute(user, loaded) {
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loaded) return;
+
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+
+    if (!user && !inAuthGroup) {
+      // Redirect to login if user is not signed in and not in auth group
+      router.replace('/login');
+    } else if (user && inAuthGroup) {
+      // Redirect to dashboard (part of tabs) if user is signed in and trying to access login/register
+      router.replace('/(tabs)');
+    }
+  }, [user, segments, loaded]);
 }
 
 const WebContainer = ({ children }) => {
@@ -35,6 +61,9 @@ const WebContainer = ({ children }) => {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const [user, setUser] = useState(null);
+  const [initializing, setInitializing] = useState(true);
+
   const [loaded] = useFonts({
     Montserrat_400Regular,
     Montserrat_700Bold,
@@ -42,13 +71,25 @@ export default function RootLayout() {
     Poppins_700Bold,
   });
 
+  // Handle user state changes
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      if (initializing) setInitializing(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
   useEffect(() => {
     if (loaded && Platform.OS !== 'web') {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
 
-  if (!loaded) return null;
+  useProtectedRoute(user, loaded);
+
+  if (!loaded || initializing) return null;
 
   return (
     <WebContainer>
@@ -65,6 +106,7 @@ export default function RootLayout() {
           <Stack.Screen name="menu" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>
+        <Toast />
         <StatusBar style="auto" />
       </ThemeProvider>
     </WebContainer>
