@@ -1,11 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../constants/firebase';
+
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 
 export default function MenuScreen() {
   const router = useRouter();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Check admin role from backend
+        try {
+          const res = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(user.email)}`);
+          if (res.ok) {
+            const data = await res.json();
+            setIsAdmin(data.role === 'admin');
+          }
+        } catch (e) {}
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleDashboardPress = () => {
+    router.back();
+    if (isAdmin) {
+      router.push('/admin/dashboard');
+    } else {
+      router.push('/dashboard');
+    }
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#0E3B6E' }}>
@@ -36,7 +66,7 @@ export default function MenuScreen() {
         {/* Dashboard Menu Item */}
         <TouchableOpacity 
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
-          onPress={() => { router.back(); router.push('/dashboard'); }}
+          onPress={handleDashboardPress}
         >
           <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
             <Ionicons name="grid-outline" size={20} color="#E86F21" />
@@ -44,6 +74,20 @@ export default function MenuScreen() {
           <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Dashboard</Text>
           <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
+
+        {/* Admin Panel Link - Only visible for admin users */}
+        {isAdmin && (
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
+            onPress={() => { router.back(); router.push('/admin/dashboard'); }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(239,68,68,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+              <Ionicons name="shield-checkmark" size={20} color="#EF4444" />
+            </View>
+            <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Admin Panel</Text>
+            <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+        )}
 
         {/* Login Menu Item */}
         <TouchableOpacity 
@@ -66,6 +110,18 @@ export default function MenuScreen() {
             <Ionicons name="person-add-outline" size={20} color="#E86F21" />
           </View>
           <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Create Account</Text>
+          <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
+
+        {/* Sponsor Dashboard Menu Item */}
+        <TouchableOpacity 
+          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
+          onPress={() => { router.back(); router.push('/sponsor/dashboard'); }}
+        >
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(245,158,11,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+            <Ionicons name="gift" size={20} color="#F59E0B" />
+          </View>
+          <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Sponsorship</Text>
           <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 

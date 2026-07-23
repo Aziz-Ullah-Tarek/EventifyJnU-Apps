@@ -1,10 +1,32 @@
 import { Tabs, useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { TouchableOpacity, Platform, View, Text } from 'react-native';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../constants/firebase';
+
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 
 export default function TabLayout() {
   const router = useRouter();
+
+  // Redirect admins away from student tabs to admin dashboard
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(user.email)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.role === 'admin') {
+              router.replace('/admin/dashboard');
+            }
+          }
+        } catch (e) {}
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   return (
     <Tabs

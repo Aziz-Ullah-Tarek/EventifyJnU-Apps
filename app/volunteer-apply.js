@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message';
+import { auth } from '../constants/firebase';
 
 const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 
@@ -29,13 +30,21 @@ export default function VolunteerApplyScreen() {
 
     try {
       setLoading(true);
+      const user = auth.currentUser;
+      const userEmail = user ? user.email : formData.applicantEmail;
+
       const response = await fetch(`${API_BASE_URL}/volunteer/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           event: eventId,
           role: role,
-          ...formData
+          userEmail: userEmail,
+          applicantName: formData.applicantName,
+          applicantEmail: formData.applicantEmail,
+          applicantPhone: formData.applicantPhone,
+          applicantDept: formData.applicantDept,
+          experience: formData.experience
         })
       });
 

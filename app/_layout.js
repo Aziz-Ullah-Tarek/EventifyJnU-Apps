@@ -15,12 +15,33 @@ import { useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../constants/firebase';
 
+const ADMIN_EMAIL = 'azizullaht2002@gmail.com';
+
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 if (Platform.OS !== 'web') {
   SplashScreen.preventAutoHideAsync();
+}
+
+// Simple cache to avoid repeated API calls
+let adminRoleCache = null;
+
+async function checkIsAdmin(userEmail) {
+  if (!userEmail) return false;
+  // If it's the hardcoded admin email, skip API call
+  if (userEmail.toLowerCase() === ADMIN_EMAIL) return true;
+  // Try fetching from backend
+  try {
+    const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+    const res = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userEmail)}`);
+    if (res.ok) {
+      const data = await res.json();
+      return data.role === 'admin';
+    }
+  } catch (e) {}
+  return false;
 }
 
 /**
@@ -34,13 +55,28 @@ function useProtectedRoute(user, loaded) {
     if (!loaded) return;
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+    const isAdminRoute = segments[0] === 'admin';
 
     if (!user && !inAuthGroup) {
       // Redirect to login if user is not signed in and not in auth group
       router.replace('/login');
     } else if (user && inAuthGroup) {
-      // Redirect to dashboard (part of tabs) if user is signed in and trying to access login/register
-      router.replace('/(tabs)');
+      // User is signed in and trying to access login/register
+      // Check if admin and redirect accordingly
+      checkIsAdmin(user.email).then(isAdmin => {
+        if (isAdmin) {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/(tabs)');
+        }
+      });
+    } else if (user && isAdminRoute) {
+      // User is trying to access admin route - verify they're admin
+      checkIsAdmin(user.email).then(isAdmin => {
+        if (!isAdmin) {
+          router.replace('/(tabs)');
+        }
+      });
     }
   }, [user, segments, loaded]);
 }
@@ -98,11 +134,16 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="register" options={{ headerShown: false }} />
-          <Stack.Screen name="settings" options={{ headerShown: false }} />
+          <Stack.Screen name="dashboard" options={{ headerShown: false }} />
           <Stack.Screen name="about" options={{ headerShown: false }} />
-          <Stack.Screen name="events" options={{ headerShown: false }} />
           <Stack.Screen name="volunteer" options={{ headerShown: false }} />
+          <Stack.Screen name="volunteer-apply" options={{ headerShown: false }} />
           <Stack.Screen name="room-booking" options={{ headerShown: false }} />
+          <Stack.Screen name="event-booking" options={{ headerShown: false }} />
+          <Stack.Screen name="sponsorship" options={{ headerShown: false }} />
+          <Stack.Screen name="services" options={{ headerShown: false }} />
+          <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="bookings/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="menu" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
         </Stack>

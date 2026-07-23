@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, ActivityIndicator, Dimensions, Platform } from 'react-native';
+import { View, Text, ScrollView, Image, TouchableOpacity, SafeAreaView, ActivityIndicator, Dimensions, Platform, Modal } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
+import Toast from 'react-native-toast-message';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../constants/firebase';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
@@ -12,9 +15,15 @@ export default function EventDetailsScreen() {
   const router = useRouter();
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [registering, setRegistering] = useState(false);
+  const [showTicket, setShowTicket] = useState(false);
+  const [ticketData, setTicketData] = useState(null);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     fetchEventDetails();
+    const unsub = onAuthStateChanged(auth, (u) => setUser(u));
+    return unsub;
   }, [id]);
 
   const fetchEventDetails = async () => {
@@ -28,6 +37,43 @@ export default function EventDetailsScreen() {
       console.log('Fetch error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRegister = async () => {
+    if (!user) {
+      Toast.show({ type: 'error', text1: 'Login Required', text2: 'Please login to register for events' });
+      router.push('/login');
+      return;
+    }
+    try {
+      setRegistering(true);
+      const response = await fetch(`${API_BASE_URL}/events/${id}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.uid,
+          userName: user.displayName || user.email?.split('@')[0] || 'Student',
+          userEmail: user.email,
+          userDepartment: '',
+          userBatch: '',
+          paymentMethod: event.isPaid ? 'stripe' : 'free'
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setTicketData(data.registration);
+        setShowTicket(true);
+        // Refresh event to update count
+        fetchEventDetails();
+        Toast.show({ type: 'success', text1: 'Registered!', text2: `Ticket: ${data.registration.ticketCode}` });
+      } else {
+        Toast.show({ type: 'error', text1: 'Registration Failed', text2: data.message });
+      }
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Error', text2: error.message });
+    } finally {
+      setRegistering(false);
     }
   };
 
@@ -162,10 +208,14 @@ export default function EventDetailsScreen() {
                   </View>
                   
                   <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Role:</Text>
-                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 13, marginBottom: 12 }}>{v.description}</Text>
-                  
-                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Requirements & Skills:</Text>
-                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 13, marginBottom: 12 }}>{v.requirements}</Text>
+                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 13, marginBottom: 12 }}>{v.description || 'No description'}</Text>
+
+                  {v.requirements && (
+                    <>
+                      <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Requirements & Skills:</Text>
+                      <Text style={{ fontFamily: 'Poppins_400Regular', color: '#4B5563', fontSize: 13, marginBottom: 12 }}>{v.requirements}</Text>
+                    </>
+                  )}
                   
                   {v.schedule && (
                     <>
@@ -174,15 +224,19 @@ export default function EventDetailsScreen() {
                     </>
                   )}
 
-                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Benefits & Rewards:</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {v.benefits.split(',').map((benefit, bIdx) => (
-                      <View key={bIdx} style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="gift-outline" size={14} color="#059669" style={{ marginRight: 4 }} />
-                        <Text style={{ fontFamily: 'Poppins_600SemiBold', color: '#059669', fontSize: 11 }}>{benefit.trim()}</Text>
+                  {v.benefits && (
+                    <>
+                      <Text style={{ fontFamily: 'Montserrat_600SemiBold', color: '#374151', fontSize: 13, marginBottom: 4 }}>Benefits & Rewards:</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                        {(typeof v.benefits === 'string' ? v.benefits.split(',') : v.benefits || []).map((benefit, bIdx) => (
+                          <View key={bIdx} style={{ backgroundColor: '#D1FAE5', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="gift-outline" size={14} color="#059669" style={{ marginRight: 4 }} />
+                            <Text style={{ fontFamily: 'Poppins_600SemiBold', color: '#059669', fontSize: 11 }}>{(benefit || '').trim()}</Text>
+                          </View>
+                        ))}
                       </View>
-                    ))}
-                  </View>
+                    </>
+                  )}
 
                   <TouchableOpacity 
                     onPress={() => router.push({
@@ -208,15 +262,56 @@ export default function EventDetailsScreen() {
           <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#0E3B6E', fontSize: 22 }}>{event.isPaid ? `৳${event.price}` : 'FREE'}</Text>
         </View>
         <TouchableOpacity 
-          onPress={() => router.push({
-            pathname: "/event-booking",
-            params: { id: event._id }
-          })}
-          style={{ backgroundColor: '#E86F21', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12, shadowColor: '#E86F21', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }}
+          onPress={handleRegister}
+          disabled={registering}
+          style={{ backgroundColor: '#E86F21', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12, shadowColor: '#E86F21', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6, opacity: registering ? 0.7 : 1 }}
         >
-          <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 16 }}>Register Now</Text>
+          {registering ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 16 }}>Register Now</Text>
+          )}
         </TouchableOpacity>
       </View>
+
+      {/* QR Ticket Modal */}
+      <Modal visible={showTicket} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, width: '100%', maxWidth: 360, padding: 24, alignItems: 'center' }}>
+            <View style={{ backgroundColor: '#D1FAE5', borderRadius: 50, width: 60, height: 60, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <Ionicons name="checkmark-circle" size={40} color="#10B981" />
+            </View>
+            <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 20, color: '#1F2937', marginBottom: 4 }}>Registration Successful!</Text>
+            <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 20 }}>
+              Show this QR code at the event entry
+            </Text>
+
+            {ticketData?.qrCode && (
+              <Image source={{ uri: ticketData.qrCode }} style={{ width: 220, height: 220 }} resizeMode="contain" />
+            )}
+
+            <View style={{ backgroundColor: '#F3F4F6', borderRadius: 12, padding: 12, width: '100%', alignItems: 'center', marginTop: 16 }}>
+              <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 11, color: '#9CA3AF' }}>Ticket Code</Text>
+              <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 16, color: '#0E3B6E', marginTop: 2 }}>{ticketData?.ticketCode}</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', marginTop: 20, gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => { setShowTicket(false); router.push('/(tabs)/tickets'); }}
+                style={{ flex: 1, backgroundColor: '#0E3B6E', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+              >
+                <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 14 }}>My Tickets</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setShowTicket(false)}
+                style={{ flex: 1, backgroundColor: '#F3F4F6', paddingVertical: 12, borderRadius: 12, alignItems: 'center' }}
+              >
+                <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#4B5563', fontSize: 14 }}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }

@@ -1,22 +1,58 @@
-import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, Image, Dimensions, ActivityIndicator, Platform, Modal } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from '../../constants/firebase';
+import Toast from 'react-native-toast-message';
 
-// Dummy Tickets Data
-const TICKETS = [
-  { id: 't1', title: 'Tech Symposium 2026', date: 'Oct 15, 2026', time: '10:00 AM', venue: 'Main Auditorium', status: 'upcoming', type: 'General Admission', ticketCode: '#TS26-804A' },
-  { id: 't2', title: 'StartUp Pitch Deck', date: 'Oct 20, 2026', time: '1:00 PM', venue: 'Business Hall B', status: 'upcoming', type: 'VIP Delegate', ticketCode: '#SP26-001V' },
-  { id: 't3', title: 'Spring Music Concert', date: 'Mar 10, 2026', time: '6:30 PM', venue: 'Open Air Theatre', status: 'past', type: 'General Admission', ticketCode: '#SM26-443B' },
-];
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 
 export default function MyTicketsScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' or 'past'
+  const [registrations, setRegistrations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('upcoming');
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [showQR, setShowQR] = useState(false);
+  const [user, setUser] = useState(null);
 
-  const filteredTickets = TICKETS.filter(t => t.status === activeTab);
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) fetchTickets(u.email);
+      else setLoading(false);
+    });
+    return unsub;
+  }, []);
+
+  const fetchTickets = async (email) => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/registerevnts/${email}`);
+      if (response.ok) {
+        const data = await response.json();
+        setRegistrations(data);
+      }
+    } catch (error) {
+      console.log('Fetch tickets error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const now = new Date();
+  const upcomingTickets = registrations.filter(r => {
+    const eventDate = r.event?.date ? new Date(r.event.date) : now;
+    return eventDate >= now && r.status !== 'cancelled';
+  });
+  const pastTickets = registrations.filter(r => {
+    const eventDate = r.event?.date ? new Date(r.event.date) : now;
+    return eventDate < now || r.status === 'cancelled';
+  });
+
+  const filteredTickets = activeTab === 'upcoming' ? upcomingTickets : pastTickets;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
@@ -45,100 +81,108 @@ export default function MyTicketsScreen() {
 
       {/* Ticket List */}
       <ScrollView contentContainerStyle={{ padding: 20 }}>
-        {filteredTickets.length === 0 ? (
+        {loading ? (
+          <View style={{ alignItems: 'center', marginTop: 60 }}>
+            <ActivityIndicator size="large" color="#E86F21" />
+            <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', marginTop: 12 }}>Loading tickets...</Text>
+          </View>
+        ) : !user ? (
+          <View style={{ alignItems: 'center', marginTop: 60 }}>
+            <Ionicons name="ticket-outline" size={80} color="#D1D5DB" />
+            <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 18, color: '#6B7280', marginTop: 16 }}>Login to view tickets</Text>
+            <TouchableOpacity onPress={() => router.push('/login')} style={{ marginTop: 16, backgroundColor: '#0E3B6E', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}>
+              <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 14 }}>Log In</Text>
+            </TouchableOpacity>
+          </View>
+        ) : filteredTickets.length === 0 ? (
            <View style={{ alignItems: 'center', marginTop: 60 }}>
              <Ionicons name="ticket-outline" size={80} color="#D1D5DB" />
              <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 18, color: '#6B7280', marginTop: 16 }}>No tickets found</Text>
              <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center' }}>You haven&apos;t registered for any events yet.</Text>
            </View>
         ) : (
-          filteredTickets.map(ticket => (
-            <View key={ticket.id} style={{ backgroundColor: '#FFFFFF', borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, overflow: 'hidden' }}>
-              {/* Ticket Top */}
-              <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', borderStyle: 'dashed' }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                  <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 18, color: '#1F2937', flex: 1, paddingRight: 12 }} numberOfLines={2}>
-                    {ticket.title}
-                  </Text>
-                  <View style={{ backgroundColor: activeTab === 'upcoming' ? '#FEF3C7' : '#F3F4F6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                    <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 12, color: activeTab === 'upcoming' ? '#D97706' : '#6B7280' }}>
-                      {activeTab === 'upcoming' ? 'Valid' : 'Expired'}
+          filteredTickets.map(reg => {
+            const ev = reg.event || {};
+            const eventDate = ev.date ? new Date(ev.date) : new Date();
+            return (
+              <TouchableOpacity key={reg._id} activeOpacity={0.9} onPress={() => { setSelectedTicket(reg); setShowQR(true); }} style={{ backgroundColor: '#FFFFFF', borderRadius: 16, marginBottom: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, overflow: 'hidden' }}>
+                <View style={{ padding: 20, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', borderStyle: 'dashed' }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 18, color: '#1F2937', flex: 1, paddingRight: 12 }} numberOfLines={2}>
+                      {ev.title || 'Unknown Event'}
+                    </Text>
+                    <View style={{ backgroundColor: reg.status === 'checked-in' ? '#D1FAE5' : activeTab === 'upcoming' ? '#FEF3C7' : '#F3F4F6', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
+                      <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 12, color: reg.status === 'checked-in' ? '#059669' : activeTab === 'upcoming' ? '#D97706' : '#6B7280' }}>
+                        {reg.status === 'checked-in' ? 'Checked In' : reg.status === 'cancelled' ? 'Cancelled' : activeTab === 'upcoming' ? 'Valid' : 'Expired'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                    <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+                    <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#4B5563', marginLeft: 8 }}>
+                      {eventDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </Text>
                   </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="location-outline" size={16} color="#6B7280" />
+                    <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#4B5563', marginLeft: 8 }}>{ev.location || 'N/A'}</Text>
+                  </View>
                 </View>
-
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Ionicons name="calendar-outline" size={16} color="#6B7280" />
-                  <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#4B5563', marginLeft: 8 }}>{ticket.date} • {ticket.time}</Text>
+                <View style={{ position: 'absolute', top: '65%', left: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: '#F8F9FA' }} />
+                <View style={{ position: 'absolute', top: '65%', right: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: '#F8F9FA' }} />
+                <View style={{ padding: 20, backgroundColor: '#FAFAFA', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View>
+                    <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#9CA3AF' }}>Ticket ID</Text>
+                    <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 14, color: '#0E3B6E' }}>{reg.ticketCode}</Text>
+                    <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>Status</Text>
+                    <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 14, color: reg.status === 'confirmed' ? '#10B981' : reg.status === 'checked-in' ? '#3B82F6' : '#6B7280' }}>{reg.status}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    onPress={() => { setSelectedTicket(reg); setShowQR(true); }}
+                    style={{ backgroundColor: '#0E3B6E', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 }}>
+                    <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 14, color: '#FFFFFF' }}>Show QR</Text>
+                  </TouchableOpacity>
                 </View>
-                
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Ionicons name="location-outline" size={16} color="#6B7280" />
-                  <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#4B5563', marginLeft: 8 }}>{ticket.venue}</Text>
-                </View>
-              </View>
-
-              {/* Ticket Cutouts (Simulated visually) */}
-              <View style={{ position: 'absolute', top: '65%', left: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: '#F8F9FA' }} />
-              <View style={{ position: 'absolute', top: '65%', right: -10, width: 20, height: 20, borderRadius: 10, backgroundColor: '#F8F9FA' }} />
-
-              {/* Ticket Bottom */}
-              <View style={{ padding: 20, backgroundColor: '#FAFAFA', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#9CA3AF' }}>Ticket Type</Text>
-                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 14, color: '#1F2937' }}>{ticket.type}</Text>
-                  
-                  <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>Ticket ID</Text>
-                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 14, color: '#0E3B6E' }}>{ticket.ticketCode}</Text>
-                </View>
-
-                <TouchableOpacity 
-                  disabled={activeTab === 'past'}
-                  onPress={() => setSelectedTicket(ticket)}
-                  style={{
-                    backgroundColor: activeTab === 'upcoming' ? '#0E3B6E' : '#E5E7EB',
-                    paddingHorizontal: 20,
-                    paddingVertical: 12,
-                    borderRadius: 12
-                  }}>
-                  <Text style={{ fontFamily: 'Montserrat_600SemiBold', fontSize: 14, color: activeTab === 'upcoming' ? '#FFFFFF' : '#9CA3AF' }}>
-                    Show QR
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))
+              </TouchableOpacity>
+            );
+          })
         )}
       </ScrollView>
 
-      {/* QR Code Expansion Modal */}
-      {selectedTicket && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 20, zIndex: 100 }}>
-          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 30, width: '100%', alignItems: 'center' }}>
-            <TouchableOpacity onPress={() => setSelectedTicket(null)} style={{ position: 'absolute', top: 16, right: 16, padding: 8 }}>
+      {/* QR Code Modal */}
+      <Modal visible={showQR} transparent animationType="fade" onRequestClose={() => setShowQR(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 24, padding: 30, width: '100%', maxWidth: 360, alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => setShowQR(false)} style={{ position: 'absolute', top: 16, right: 16, padding: 8, zIndex: 10 }}>
               <Ionicons name="close" size={28} color="#6B7280" />
             </TouchableOpacity>
 
-            <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 20, color: '#0E3B6E', marginBottom: 8, textAlign: 'center', marginTop: 10 }}>{selectedTicket.title}</Text>
-            <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#6B7280', marginBottom: 24 }}>{selectedTicket.date} • {selectedTicket.time}</Text>
+            <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 20, color: '#0E3B6E', marginBottom: 4, textAlign: 'center', marginTop: 10 }}>
+              {selectedTicket?.event?.title || 'Event Ticket'}
+            </Text>
+            <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 13, color: '#6B7280', marginBottom: 24, textAlign: 'center' }}>
+              {selectedTicket?.event?.date ? new Date(selectedTicket.event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) : ''}
+            </Text>
 
-            {/* Simulated Large QR */}
-            <View style={{ padding: 16, borderWidth: 2, borderColor: '#E5E7EB', borderRadius: 16, backgroundColor: '#FFFFFF', marginBottom: 24 }}>
-               <View style={{ width: 200, height: 200, backgroundColor: '#000000', flexDirection: 'row', flexWrap: 'wrap', alignContent: 'center', justifyContent: 'center' }}>
-                  {[...Array(64)].map((_, i) => (
-                      <View key={i} style={{ width: 25, height: 25, backgroundColor: i % 2 === 0 ? '#000' : '#FFF' }} />
-                  ))}
-               </View>
+            {selectedTicket?.qrCode ? (
+              <Image source={{ uri: selectedTicket.qrCode }} style={{ width: 240, height: 240 }} resizeMode="contain" />
+            ) : (
+              <View style={{ width: 240, height: 240, backgroundColor: '#F3F4F6', borderRadius: 16, alignItems: 'center', justifyContent: 'center' }}>
+                <Ionicons name="qr-code" size={80} color="#D1D5DB" />
+              </View>
+            )}
+
+            <View style={{ backgroundColor: '#F3F4F6', borderRadius: 12, padding: 12, width: '100%', alignItems: 'center', marginTop: 20 }}>
+              <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 11, color: '#9CA3AF' }}>Ticket Code</Text>
+              <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 16, color: '#0E3B6E', marginTop: 2 }}>{selectedTicket?.ticketCode}</Text>
             </View>
 
-            <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 14, color: '#6B7280' }}>Scan this code at the venue entry</Text>
-            <View style={{ backgroundColor: '#F3F4F6', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, marginTop: 16 }}>
-              <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 16, color: '#0E3B6E', letterSpacing: 2 }}>{selectedTicket.ticketCode}</Text>
-            </View>
-
+            <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#9CA3AF', marginTop: 16, textAlign: 'center' }}>
+              Show this QR code at the event entry for check-in
+            </Text>
           </View>
         </View>
-      )}
+      </Modal>
     </SafeAreaView>
   );
 }

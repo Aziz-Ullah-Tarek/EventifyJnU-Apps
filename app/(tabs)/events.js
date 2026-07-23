@@ -1,26 +1,40 @@
-import React, { useState } from 'react';
-import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Image, Dimensions } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, SafeAreaView, TouchableOpacity, ScrollView, TextInput, Image, Dimensions, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 
-// Dummy Data
-const MOCK_EVENTS = [
-  { id: '1', title: 'Tech Symposium 2026', category: 'Tech', date: 'Oct 15, 2026 • 10:00 AM', venue: 'Main Auditorium', price: 'Free', organizer: 'CSE Dept', image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500&q=80' },
-  { id: '2', title: 'Annual Cultural Fest', category: 'Culture', date: 'Nov 02, 2026 • 5:00 PM', venue: 'Open Air Theatre', price: '$15.00', organizer: 'Arts Club', image: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=500&q=80' },
-  { id: '3', title: 'StartUp Pitch Deck', category: 'Business', date: 'Oct 20, 2026 • 1:00 PM', venue: 'Business Hall B', price: 'Free', organizer: 'Entrepreneurship Cell', image: 'https://images.unsplash.com/photo-1556761175-4b46a572b786?w=500&q=80' },
-  { id: '4', title: 'Inter-Department Basketball', category: 'Sports', date: 'Oct 25, 2026 • 8:00 AM', venue: 'University Gym', price: 'Free', organizer: 'Sports Committee', image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=500&q=80' },
-  { id: '5', title: 'AI & Data Science Workshop', category: 'Tech', date: 'Nov 10, 2026 • 9:00 AM', venue: 'Computer Lab 1', price: '$5.00', organizer: 'AI Society', image: 'https://images.unsplash.com/photo-1591115765373-5207764f72e7?w=500&q=80' },
-];
+const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
 
-const CATEGORIES = ['All', 'Tech', 'Culture', 'Business', 'Sports'];
+const CATEGORIES = ['All', 'Tech', 'Culture', 'Business', 'Sports', 'Music', 'Workshop', 'Other'];
 
 export default function EventsScreen() {
   const router = useRouter();
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
-  const filteredEvents = MOCK_EVENTS.filter(event => {
+  useEffect(() => {
+    fetchEvents();
+  }, []);
+
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/events`);
+      if (!response.ok) throw new Error('Failed to fetch');
+      const data = await response.json();
+      setEvents(data);
+    } catch (error) {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Could not load events' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || event.category === selectedCategory;
     return matchesSearch && matchesCategory;
@@ -93,7 +107,12 @@ export default function EventsScreen() {
           {selectedCategory === 'All' ? 'All Events' : `${selectedCategory} Events`}
         </Text>
 
-        {filteredEvents.length === 0 ? (
+        {loading ? (
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <ActivityIndicator size="large" color="#E86F21" />
+            <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', marginTop: 12 }}>Loading events...</Text>
+          </View>
+        ) : filteredEvents.length === 0 ? (
           <View style={{ alignItems: 'center', marginTop: 40 }}>
             <Ionicons name="calendar-outline" size={60} color="#D1D5DB" />
             <Text style={{ fontFamily: 'Poppins_500Medium', color: '#6B7280', marginTop: 12, fontSize: 16 }}>No events found.</Text>
@@ -101,9 +120,9 @@ export default function EventsScreen() {
         ) : (
           filteredEvents.map(event => (
             <TouchableOpacity 
-              key={event.id}
+              key={event._id}
               activeOpacity={0.9}
-              onPress={() => router.push(`/event/${event.id}`)}
+              onPress={() => router.push(`/event/${event._id}`)}
               style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: 16,
@@ -116,10 +135,12 @@ export default function EventsScreen() {
                 overflow: 'hidden'
               }}
             >
-              <Image source={{ uri: event.image }} style={{ width: '100%', height: 180 }} resizeMode="cover" />
+              <Image source={{ uri: event.imageUrl || 'https://via.placeholder.com/600x300' }} style={{ width: '100%', height: 180 }} resizeMode="cover" />
               
               <View style={{ position: 'absolute', top: 12, right: 12, backgroundColor: 'rgba(255,255,255,0.9)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}>
-                <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#E86F21', fontSize: 14 }}>{event.price}</Text>
+                <Text style={{ fontFamily: 'Montserrat_700Bold', color: event.isPaid ? '#E86F21' : '#10B981', fontSize: 14 }}>
+                  {event.isPaid ? `৳${event.price}` : 'FREE'}
+                </Text>
               </View>
 
               <View style={{ padding: 16 }}>
@@ -129,12 +150,14 @@ export default function EventsScreen() {
                 
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                   <Ionicons name="time-outline" size={16} color="#6B7280" />
-                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 13, marginLeft: 6 }}>{event.date}</Text>
+                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 13, marginLeft: 6 }}>
+                    {new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </Text>
                 </View>
                 
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                   <Ionicons name="location-outline" size={16} color="#6B7280" />
-                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 13, marginLeft: 6 }}>{event.venue}</Text>
+                  <Text style={{ fontFamily: 'Poppins_400Regular', color: '#6B7280', fontSize: 13, marginLeft: 6 }}>{event.location}</Text>
                 </View>
 
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 }}>

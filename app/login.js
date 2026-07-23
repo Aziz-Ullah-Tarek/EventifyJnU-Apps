@@ -22,12 +22,14 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      let processingEmail = emailId;
-      if (!emailId.includes('@')) {
-        processingEmail = `${emailId}@jnu.ac.bd`;
+      let processingEmail = emailId.trim();
+      const trimmedPassword = password.trim();
+      
+      if (!processingEmail.includes('@')) {
+        processingEmail = `${processingEmail}@jnu.ac.bd`;
       }
 
-      const userCredential = await signInWithEmailAndPassword(auth, processingEmail, password);
+      const userCredential = await signInWithEmailAndPassword(auth, processingEmail, trimmedPassword);
       const user = userCredential.user;
 
       // Sync user with Backend MongoDB
@@ -61,7 +63,23 @@ export default function LoginScreen() {
       }
       
       Toast.show({ type: 'success', text1: 'Success', text2: 'Logged in successfully!' });
-      router.replace('/(tabs)');
+      
+      // Check user role from backend to determine routing
+      const API_BASE = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+      let isAdmin = false;
+      try {
+        const userRes = await fetch(`${API_BASE}/users/${encodeURIComponent(user.email)}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          isAdmin = userData.role === 'admin';
+        }
+      } catch (e) {}
+      
+      if (isAdmin) {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Login failed', text2: error.message });
     } finally {
@@ -72,27 +90,69 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     try {
       setLoading(true);
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
+      let user;
 
-      // Sync user with Backend MongoDB
+      // Try web popup first, fallback to redirect for mobile
       try {
-        const syncResponse = await fetch('http://localhost:5000/api/users/sync', {
+        const result = await signInWithPopup(auth, googleProvider);
+        user = result.user;
+      } catch (popupError) {
+        // If popup blocked or on mobile, try alternate approach
+        console.log('Popup login failed, using fallback:', popupError.message);
+        throw popupError;
+      }
+
+      const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+
+      // Sync user with Backend MongoDB - use a proper photoURL from Google
+      const googlePhotoURL = user.photoURL || 
+        (user.providerData && user.providerData[0]?.photoURL) || 
+        `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email || 'U')}&background=0E3B6E&color=fff&size=200`;
+
+      const syncPayload = {
+        email: user.email,
+        name: user.displayName || user.email.split('@')[0],
+        photoURL: googlePhotoURL,
+      };
+
+      // Sync with local backend first
+      try {
+        const syncResponse = await fetch(`${API_BASE_URL}/users/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email,
-            name: user.displayName,
-            photoURL: user.photoURL,
-          }),
+          body: JSON.stringify(syncPayload),
         });
-        if (!syncResponse.ok) console.error('Sync failed:', await syncResponse.text());
-      } catch (syncError) {
-        console.error('Failed to sync user with DB:', syncError);
+        if (!syncResponse.ok) throw new Error('Local sync failed');
+      } catch (localError) {
+        // Fallback to Vercel
+        try {
+          await fetch('https://eventify-jnu-backend.vercel.app/api/users/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(syncPayload),
+          });
+        } catch (vercelError) {
+          console.error('Failed to sync user with DB:', vercelError);
+        }
       }
       
-      Toast.show({ type: 'success', text1: 'Success', text2: `Welcome ${user.displayName}!` });
-      router.replace('/(tabs)');
+      Toast.show({ type: 'success', text1: 'Success', text2: `Welcome ${user.displayName || user.email}!` });
+      
+      // Check user role from backend to determine routing
+      let isAdmin = false;
+      try {
+        const userRes = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(user.email)}`);
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          isAdmin = userData.role === 'admin';
+        }
+      } catch (e) {}
+      
+      if (isAdmin) {
+        router.replace('/admin/dashboard');
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Google Login failed', text2: error.message });
     } finally {
