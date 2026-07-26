@@ -146,8 +146,9 @@ export default function AdminDashboard() {
     { key: 'overview', label: 'Overview', icon: 'grid-outline' },
     { key: 'users', label: 'Users', icon: 'people-outline' },
     { key: 'events', label: 'Events', icon: 'calendar-outline' },
+    { key: 'rooms', label: 'Rooms', icon: 'business-outline' },
     { key: 'volunteers', label: 'Volunteers', icon: 'hand-right-outline' },
-    { key: 'bookings', label: 'Bookings', icon: 'business-outline' },
+    { key: 'bookings', label: 'Bookings', icon: 'calendar-number-outline' },
   ];
 
   const renderOverview = () => (
@@ -276,8 +277,36 @@ export default function AdminDashboard() {
     </SectionCard>
   );
 
+  const renderRooms = () => (
+    <SectionCard icon="business" iconColor={COLORS.info} title="Room Management">
+      <TouchableOpacity onPress={() => router.push('/admin/manage-rooms')}
+        style={{ backgroundColor: COLORS.primary, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+        <Ionicons name="settings-outline" size={20} color="#FFF" style={{ marginRight: 8 }} />
+        <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFF', fontSize: 15 }}>Manage All Rooms</Text>
+      </TouchableOpacity>
+      <View style={{ backgroundColor: COLORS.gray[50], borderRadius: 16, padding: 16, borderWidth: 1, borderColor: COLORS.gray[100] }}>
+        <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 13, color: COLORS.gray[500], textAlign: 'center', lineHeight: 20 }}>
+          From the Room Management panel, you can:
+        </Text>
+        <View style={{ marginTop: 12, gap: 8 }}>
+          {[
+            { icon: 'add-circle', text: 'Add new rooms with details (name, type, capacity, price, amenities)' },
+            { icon: 'create', text: 'Edit existing room information anytime' },
+            { icon: 'trash', text: 'Delete rooms that are no longer available' },
+            { icon: 'search', text: 'Search and filter rooms' },
+          ].map((item, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Ionicons name={item.icon} size={16} color={COLORS.info} />
+              <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: COLORS.gray[600], flex: 1 }}>{item.text}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    </SectionCard>
+  );
+
   const renderBookings = () => (
-    <SectionCard icon="business" iconColor={COLORS.info} title={`Room Bookings (${bookings.length})`}>
+    <SectionCard icon="calendar-number" iconColor={COLORS.info} title={`Room Bookings (${bookings.length})`}>
       {bookings.map((bk, index) => (
         <View key={bk._id || index} style={{ backgroundColor: COLORS.gray[50], borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.gray[100] }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -331,7 +360,7 @@ export default function AdminDashboard() {
         {loading ? (
           <View style={{ paddingVertical: 60, alignItems: 'center' }}><ActivityIndicator size="large" color={COLORS.primary} /><Text style={{ fontFamily: 'Poppins_400Regular', color: COLORS.gray[400], marginTop: 12 }}>Loading dashboard data...</Text></View>
         ) : (
-          <>{activeTab === 'overview' && renderOverview()}{activeTab === 'users' && renderUsers()}{activeTab === 'events' && renderEvents()}{activeTab === 'volunteers' && renderVolunteers()}{activeTab === 'bookings' && renderBookings()}</>
+          <>{activeTab === 'overview' && renderOverview()}{activeTab === 'users' && renderUsers()}{activeTab === 'events' && renderEvents()}{activeTab === 'rooms' && renderRooms()}{activeTab === 'volunteers' && renderVolunteers()}{activeTab === 'bookings' && renderBookings()}</>
         )}
       </ScrollView>
     </SafeAreaView>
