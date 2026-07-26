@@ -11,16 +11,17 @@ const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'h
 export default function MenuScreen() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOrganizer, setIsOrganizer] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Check admin role from backend
         try {
           const res = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(user.email)}`);
           if (res.ok) {
             const data = await res.json();
             setIsAdmin(data.role === 'admin');
+            setIsOrganizer(data.role === 'organizer' || data.role === 'admin');
           }
         } catch (e) {}
       }
@@ -89,6 +90,34 @@ export default function MenuScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Organizer Panel Link */}
+        {isOrganizer && (
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
+            onPress={() => { router.back(); router.push('/organizer/dashboard'); }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(249,115,22,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+              <Ionicons name="calendar" size={20} color="#F97316" />
+            </View>
+            <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Organizer Panel</Text>
+            <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+        )}
+
+        {/* Create Event - Quick access for organizers */}
+        {isOrganizer && (
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
+            onPress={() => { router.back(); router.push('/organizer/create-event'); }}
+          >
+            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(16,185,129,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+              <Ionicons name="add-circle" size={20} color="#10B981" />
+            </View>
+            <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Create Event</Text>
+            <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
+          </TouchableOpacity>
+        )}
+
         {/* Login Menu Item */}
         <TouchableOpacity 
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
@@ -113,15 +142,27 @@ export default function MenuScreen() {
           <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 
-        {/* Sponsor Dashboard Menu Item */}
+        {/* CSE Calendar Menu Item */}
         <TouchableOpacity 
           style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
-          onPress={() => { router.back(); router.push('/sponsor/dashboard'); }}
+          onPress={() => { router.back(); router.push('/cse-calendar'); }}
         >
-          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(245,158,11,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
-            <Ionicons name="gift" size={20} color="#F59E0B" />
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(5,150,105,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+            <Ionicons name="calendar" size={20} color="#059669" />
           </View>
-          <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Sponsorship</Text>
+          <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>CSE Calendar</Text>
+          <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
+        </TouchableOpacity>
+
+        {/* Event Memories Menu Item */}
+        <TouchableOpacity 
+          style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 18 }}
+          onPress={() => { router.back(); router.push('/memories'); }}
+        >
+          <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(99,102,241,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 16 }}>
+            <Ionicons name="images" size={20} color="#6366F1" />
+          </View>
+          <Text style={{ fontFamily: 'Poppins_700Bold', color: '#FFFFFF', fontSize: 18 }}>Event Memories</Text>
           <Ionicons name="chevron-forward" size={20} color="#A0AEC0" style={{ marginLeft: 'auto' }} />
         </TouchableOpacity>
 

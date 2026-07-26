@@ -30,15 +30,13 @@ let adminRoleCache = null;
 
 async function checkIsAdmin(userEmail) {
   if (!userEmail) return false;
-  // If it's the hardcoded admin email, skip API call
   if (userEmail.toLowerCase() === ADMIN_EMAIL) return true;
-  // Try fetching from backend
   try {
     const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
     const res = await fetch(`${API_BASE_URL}/users/${encodeURIComponent(userEmail)}`);
     if (res.ok) {
       const data = await res.json();
-      return data.role === 'admin';
+      return data.role === 'admin' || data.role === 'organizer';
     }
   } catch (e) {}
   return false;
@@ -56,22 +54,28 @@ function useProtectedRoute(user, loaded) {
 
     const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
     const isAdminRoute = segments[0] === 'admin';
+    const isOrganizerRoute = segments[0] === 'organizer';
 
     if (!user && !inAuthGroup) {
-      // Redirect to login if user is not signed in and not in auth group
       router.replace('/login');
     } else if (user && inAuthGroup) {
-      // User is signed in and trying to access login/register
-      // Check if admin and redirect accordingly
-      checkIsAdmin(user.email).then(isAdmin => {
-        if (isAdmin) {
-          router.replace('/admin/dashboard');
+      checkIsAdmin(user.email).then(isAdminOrOrganizer => {
+        if (isAdminOrOrganizer) {
+          // Check specific role to redirect correctly
+          const API_BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:5000/api' : 'http://localhost:5000/api';
+          fetch(`${API_BASE_URL}/users/${encodeURIComponent(user.email)}`)
+            .then(r => r.json())
+            .then(data => {
+              if (data.role === 'admin') router.replace('/admin/dashboard');
+              else if (data.role === 'organizer') router.replace('/organizer/dashboard');
+              else router.replace('/(tabs)');
+            })
+            .catch(() => router.replace('/(tabs)'));
         } else {
           router.replace('/(tabs)');
         }
       });
-    } else if (user && isAdminRoute) {
-      // User is trying to access admin route - verify they're admin
+    } else if (user && (isAdminRoute || isOrganizerRoute)) {
       checkIsAdmin(user.email).then(isAdmin => {
         if (!isAdmin) {
           router.replace('/(tabs)');
@@ -140,12 +144,23 @@ export default function RootLayout() {
           <Stack.Screen name="volunteer-apply" options={{ headerShown: false }} />
           <Stack.Screen name="room-booking" options={{ headerShown: false }} />
           <Stack.Screen name="event-booking" options={{ headerShown: false }} />
-          <Stack.Screen name="sponsorship" options={{ headerShown: false }} />
+          <Stack.Screen name="cse-calendar" options={{ headerShown: false }} />
+          <Stack.Screen name="cse-calendar/add-event" options={{ headerShown: false }} />
+          <Stack.Screen name="cse-calendar/edit-event" options={{ headerShown: false }} />
           <Stack.Screen name="services" options={{ headerShown: false }} />
+          <Stack.Screen name="memories" options={{ headerShown: false }} />
+          <Stack.Screen name="create-memory" options={{ headerShown: false }} />
           <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="bookings/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="menu" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="organizer/dashboard" options={{ headerShown: false }} />
+          <Stack.Screen name="organizer/create-event" options={{ headerShown: false }} />
+          <Stack.Screen name="organizer/edit-event" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/create-event" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/edit-event" options={{ headerShown: false }} />
+
         </Stack>
         <Toast />
         <StatusBar style="auto" />

@@ -34,6 +34,10 @@ async function redirectIfAdmin(email, router) {
         router.replace('/admin/dashboard');
         return true;
       }
+      if (data.role === 'organizer') {
+        router.replace('/organizer/dashboard');
+        return true;
+      }
     }
   } catch (e) {}
   return false;
@@ -140,8 +144,9 @@ export default function DashboardScreen() {
   }
 
   const userRole = dbUser?.role || 'student';
-  const roleColors = { admin: '#EF4444', moderator: '#8B5CF6', student: '#E86F21' };
-  const roleLabels = { admin: 'Admin', moderator: 'Organizer', student: 'Student' };
+  const roleColors = { admin: '#EF4444', moderator: '#8B5CF6', organizer: '#F97316', student: '#E86F21' };
+  const roleLabels = { admin: 'Admin', moderator: 'Organizer', organizer: 'Organizer', student: 'Student' };
+  const isOrganizerOrAdmin = userRole === 'organizer' || userRole === 'admin';
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F8F9FA' }}>
@@ -213,6 +218,23 @@ export default function DashboardScreen() {
             </View>
           ))}
         </View>
+
+        {/* ===== ORGANIZER PANEL BUTTON (only for organizer/admin) ===== */}
+        {isOrganizerOrAdmin && (
+          <TouchableOpacity
+            onPress={() => router.push('/organizer/dashboard')}
+            style={{ marginBottom: 20, backgroundColor: '#FFF7ED', borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderColor: '#F97316', borderStyle: 'dashed' }}
+          >
+            <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#F97316', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+              <Ionicons name="calendar" size={24} color="#FFF" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 16, color: '#F97316' }}>Organizer Panel</Text>
+              <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: '#9A3412', marginTop: 2 }}>Create events, manage registrations & volunteers</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={28} color="#F97316" />
+          </TouchableOpacity>
+        )}
 
         {/* ===== REGISTERED EVENTS ===== */}
         <View style={{ marginBottom: 20 }}>

@@ -494,9 +494,9 @@ export default function HomeScreen() {
             <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 14, marginTop: 8 }}>Room Booking</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.push('/sponsorship')} style={{ width: '48%', height: 110, backgroundColor: '#059669', borderRadius: 18, marginBottom: 14, padding: 18, justifyContent: 'center', alignItems: 'center', shadowColor: '#059669', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}>
-            <Ionicons name="cash-outline" size={28} color="#FFFFFF" />
-            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 14, marginTop: 8 }}>Sponsorship</Text>
+          <TouchableOpacity onPress={() => router.push('/cse-calendar')} style={{ width: '48%', height: 110, backgroundColor: '#059669', borderRadius: 18, marginBottom: 14, padding: 18, justifyContent: 'center', alignItems: 'center', shadowColor: '#059669', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}>
+            <Ionicons name="calendar" size={28} color="#FFFFFF" />
+            <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFFFFF', fontSize: 14, marginTop: 8 }}>CSE Calendar</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => router.push('/about')} style={{ width: '48%', height: 110, backgroundColor: '#7C3AED', borderRadius: 18, marginBottom: 14, padding: 18, justifyContent: 'center', alignItems: 'center', shadowColor: '#7C3AED', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 }}>

@@ -99,6 +99,15 @@ export default function TabLayout() {
         }} 
       />
       <Tabs.Screen 
+        name="memories" 
+        options={{ 
+          title: 'Memories', 
+          tabBarLabel: 'Memories',
+          href: '/memories',
+          tabBarIcon: ({ color, size }) => <Ionicons name="images" size={26} color={color} />
+        }} 
+      />
+      <Tabs.Screen 
         name="tickets" 
         options={{ 
           title: 'Tickets', 

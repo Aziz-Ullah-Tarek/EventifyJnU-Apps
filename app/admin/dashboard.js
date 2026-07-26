@@ -68,8 +68,7 @@ export default function AdminDashboard() {
   const [events, setEvents] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [sponsorships, setSponsorships] = useState([]);
-  const [sponsorPayments, setSponsorPayments] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
 
@@ -83,15 +82,11 @@ export default function AdminDashboard() {
         fetch(`${API_BASE_URL}/events`).then(r => r.json()),
         fetch(`${API_BASE_URL}/volunteer/applications`).then(r => r.json()),
         fetch(`${API_BASE_URL}/bookings`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/sponsorships`).then(r => r.json()),
-        fetch(`${API_BASE_URL}/sponsor/payments`).then(r => r.json())
       ]);
       setUsers(Array.isArray(usersRes) ? usersRes : []);
       setEvents(Array.isArray(eventsRes) ? eventsRes : []);
       setVolunteers(Array.isArray(volRes) ? volRes : []);
       setBookings(Array.isArray(resBookings) ? resBookings : []);
-      setSponsorships(Array.isArray(sponsorshipsRes) ? sponsorshipsRes : []);
-      setSponsorPayments(Array.isArray(sponsorPaymentsRes) ? sponsorPaymentsRes : []);
     } catch (error) {
       console.error('Fetch Admin Data Error:', error);
       Toast.show({ type: 'error', text1: 'Fetch failed', text2: `Could not connect to ${API_BASE_URL}` });
@@ -144,65 +139,15 @@ export default function AdminDashboard() {
     } catch (error) { console.error(error); }
   };
 
-  // Sponsorship actions
-  const approveSponsorship = async (id) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/sponsorships/${id}/approve`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ adminId: 'admin', adminName: 'Admin' })
-      });
-      if (res.ok) { Toast.show({ type: 'success', text1: 'Approved', text2: 'Sponsorship approved!' }); fetchAdminData(); }
-    } catch (e) { console.error(e); }
-  };
-
-  const activateSponsorship = async (id) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/sponsorships/${id}/activate`, { method: 'PUT' });
-      if (res.ok) { Toast.show({ type: 'success', text1: 'Activated', text2: 'Sponsorship activated!' }); fetchAdminData(); }
-    } catch (e) { console.error(e); }
-  };
-
-  const completeSponsorship = async (id) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/sponsorships/${id}/complete`, { method: 'PUT' });
-      if (res.ok) { Toast.show({ type: 'success', text1: 'Completed', text2: 'Sponsorship completed!' }); fetchAdminData(); }
-    } catch (e) { console.error(e); }
-  };
-
-  const cancelSponsorship = (id) => {
-    Alert.alert('Cancel Sponsorship', 'Are you sure?', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Yes', style: 'destructive', onPress: async () => {
-        try {
-          const res = await fetch(`${API_BASE_URL}/sponsorships/${id}/cancel`, {
-            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason: 'Cancelled by admin' })
-          });
-          if (res.ok) { Toast.show({ type: 'success', text1: 'Cancelled' }); fetchAdminData(); }
-        } catch (e) {}
-      }}
-    ]);
-  };
-
-  const verifySponsorPayment = async (paymentId) => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/sponsor/payment/${paymentId}/verify`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ verifiedBy: 'Admin' })
-      });
-      if (res.ok) { Toast.show({ type: 'success', text1: 'Verified', text2: 'Payment verified!' }); fetchAdminData(); }
-    } catch (e) { console.error(e); }
-  };
-
   const pendingEvents = events.filter(e => e.status === 'pending' || !e.status).length;
   const pendingVolunteers = volunteers.filter(v => v.status === 'pending' || !v.status).length;
   const pendingBookings = bookings.filter(b => b.status === 'pending' || !b.status).length;
-  const pendingSponsorships = sponsorships.filter(s => s.status === 'pending').length;
-
   const tabs = [
     { key: 'overview', label: 'Overview', icon: 'grid-outline' },
     { key: 'users', label: 'Users', icon: 'people-outline' },
     { key: 'events', label: 'Events', icon: 'calendar-outline' },
     { key: 'volunteers', label: 'Volunteers', icon: 'hand-right-outline' },
     { key: 'bookings', label: 'Bookings', icon: 'business-outline' },
-    { key: 'sponsorships', label: 'Sponsors', icon: 'gift-outline' },
   ];
 
   const renderOverview = () => (
@@ -212,8 +157,7 @@ export default function AdminDashboard() {
         <View style={{ width: '47%' }}><StatCard icon="calendar" label="Total Events" count={events.length} gradientColors={['#F97316', '#FB923C']} /></View>
         <View style={{ width: '47%' }}><StatCard icon="hand-right" label="Volunteers" count={volunteers.length} gradientColors={['#8B5CF6', '#A78BFA']} /></View>
         <View style={{ width: '47%' }}><StatCard icon="business" label="Bookings" count={bookings.length} gradientColors={['#10B981', '#34D399']} /></View>
-        <View style={{ width: '47%' }}><StatCard icon="gift" label="Sponsorships" count={sponsorships.length} gradientColors={['#F59E0B', '#FBBF24']} /></View>
-        <View style={{ width: '47%' }}><StatCard icon="cash" label="Sponsor Payments" count={sponsorPayments.length} gradientColors={['#8B5CF6', '#A78BFA']} /></View>
+
       </View>
       <SectionCard icon="flash" iconColor={COLORS.warning} title="Quick Actions">
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
@@ -229,10 +173,7 @@ export default function AdminDashboard() {
             <Ionicons name="business" size={20} color={COLORS.info} />
             <View><Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 12, color: COLORS.gray[700] }}>Room Requests</Text><Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 18, color: COLORS.info }}>{pendingBookings}</Text></View>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setActiveTab('sponsorships')} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FFFBE6', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 14, flex: 1, minWidth: 140 }}>
-            <Ionicons name="gift" size={20} color="#F59E0B" />
-            <View><Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 12, color: COLORS.gray[700] }}>Sponsor Reqs</Text><Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 18, color: '#F59E0B' }}>{pendingSponsorships}</Text></View>
-          </TouchableOpacity>
+
         </View>
       </SectionCard>
       <SectionCard icon="timer" iconColor={COLORS.primary} title="Recent Activity">
@@ -281,6 +222,12 @@ export default function AdminDashboard() {
 
   const renderEvents = () => (
     <SectionCard icon="calendar" iconColor={COLORS.accent} title={`Events (${events.length})`}>
+      {/* Create Event Button */}
+      <TouchableOpacity onPress={() => router.push('/admin/create-event')}
+        style={{ backgroundColor: COLORS.accent, borderRadius: 14, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+        <Ionicons name="add-circle" size={22} color="#FFF" style={{ marginRight: 8 }} />
+        <Text style={{ fontFamily: 'Montserrat_700Bold', color: '#FFF', fontSize: 15 }}>Create New Event</Text>
+      </TouchableOpacity>
       {events.map(event => (
         <View key={event._id} style={{ backgroundColor: COLORS.gray[50], borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.gray[100] }}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -294,13 +241,14 @@ export default function AdminDashboard() {
             </View>
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.gray[200], flexWrap: 'wrap' }}>
+            <ActionBtn label="Edit" icon="create-outline" onPress={() => router.push(`/admin/edit-event?id=${event._id}`)} color={COLORS.info} bgColor={COLORS.infoLight} />
             {(event.status === 'pending' || !event.status) && <ActionBtn label="Approve" icon="checkmark-circle" onPress={() => updateEventStatus(event._id, 'published')} color={COLORS.success} bgColor={COLORS.successLight} />}
             {!event.featured ? <ActionBtn label="Feature" icon="star" onPress={() => updateEventStatus(event._id, event.status, true)} color={COLORS.warning} bgColor={COLORS.warningLight} /> : <ActionBtn label="Unfeature" icon="star-outline" onPress={() => updateEventStatus(event._id, event.status, false)} color={COLORS.gray[500]} bgColor={COLORS.gray[100]} />}
             <ActionBtn label="Delete" icon="trash" onPress={() => deleteEvent(event._id)} color={COLORS.danger} bgColor={COLORS.dangerLight} />
           </View>
         </View>
       ))}
-      {events.length === 0 && <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 13, color: COLORS.gray[400], textAlign: 'center', paddingVertical: 20 }}>No events found.</Text>}
+      {events.length === 0 && <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 13, color: COLORS.gray[400], textAlign: 'center', paddingVertical: 20 }}>No events found. Create your first event!</Text>}
     </SectionCard>
   );
 
@@ -353,77 +301,6 @@ export default function AdminDashboard() {
     </SectionCard>
   );
 
-  const renderSponsorships = () => (
-    <>
-      <SectionCard icon="gift" iconColor="#F59E0B" title={`Sponsorships (${sponsorships.length})`}>
-        {sponsorships.map((sp, index) => {
-          const tierColors = {
-            'Title Sponsor': { bg: '#FFFBE6', text: '#B8860B' },
-            'Gold Sponsor': { bg: '#FFFBE6', text: '#B8860B' },
-            'Silver Sponsor': { bg: '#F5F5F5', text: '#71717A' },
-            'Bronze Sponsor': { bg: '#FFF3E6', text: '#8B5E3C' },
-            'Community Partner': { bg: '#EDE9FE', text: '#6D28D9' }
-          };
-          const tc = tierColors[sp.tierName] || { bg: '#F3F4F6', text: '#6B7280' };
-          return (
-            <View key={sp._id || index} style={{ backgroundColor: COLORS.gray[50], borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.gray[100] }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                    <View style={{ backgroundColor: tc.bg, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 }}>
-                      <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: 10, color: tc.text }}>{sp.tierName}</Text>
-                    </View>
-                    <StatusBadge status={sp.status} />
-                  </View>
-                  <Text style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: COLORS.gray[800] }}>{sp.sponsorName}</Text>
-                  <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: COLORS.gray[500] }}>Event: {sp.event?.title || 'Unknown'}</Text>
-                  <Text style={{ fontFamily: 'Montserrat_700Bold', fontSize: 15, color: COLORS.primary, marginTop: 4 }}>৳{sp.tierAmount?.toLocaleString()}</Text>
-                  {sp.paymentStatus && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: sp.paymentStatus === 'completed' ? COLORS.success : COLORS.warning }} />
-                      <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 11, color: COLORS.gray[400], textTransform: 'capitalize' }}>Payment: {sp.paymentStatus}</Text>
-                    </View>
-                  )}
-                </View>
-              </View>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.gray[200], flexWrap: 'wrap' }}>
-                {sp.status === 'pending' && <>
-                  <ActionBtn label="Approve" icon="checkmark-circle" onPress={() => approveSponsorship(sp._id)} color={COLORS.success} bgColor={COLORS.successLight} />
-                  <ActionBtn label="Cancel" icon="close-circle" onPress={() => cancelSponsorship(sp._id)} color={COLORS.danger} bgColor={COLORS.dangerLight} />
-                </>}
-                {sp.status === 'approved' && <ActionBtn label="Activate" icon="flash" onPress={() => activateSponsorship(sp._id)} color={COLORS.info} bgColor={COLORS.infoLight} />}
-                {sp.status === 'active' && <ActionBtn label="Complete" icon="checkmark-done" onPress={() => completeSponsorship(sp._id)} color={COLORS.success} bgColor={COLORS.successLight} />}
-              </View>
-            </View>
-          );
-        })}
-        {sponsorships.length === 0 && <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 13, color: COLORS.gray[400], textAlign: 'center', paddingVertical: 20 }}>No sponsorships yet.</Text>}
-      </SectionCard>
-      
-      {/* Sponsor Payments */}
-      <SectionCard icon="cash" iconColor={COLORS.purple} title={`Sponsor Payments (${sponsorPayments.length})`}>
-        {sponsorPayments.map((pm, index) => (
-          <View key={pm._id || index} style={{ backgroundColor: COLORS.gray[50], borderRadius: 16, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: COLORS.gray[100] }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: COLORS.gray[800] }}>৳{pm.amount?.toLocaleString()}</Text>
-                <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 12, color: COLORS.gray[500] }}>Sponsor: {pm.sponsor?.organizationName || 'Unknown'}</Text>
-                <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 11, color: COLORS.gray[400] }}>Event: {pm.event?.title || 'N/A'} | Method: {pm.paymentMethod?.replace('_', ' ') || 'N/A'}</Text>
-                <View style={{ marginTop: 6 }}><StatusBadge status={pm.status} /></View>
-              </View>
-            </View>
-            {pm.status === 'pending' && (
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.gray[200] }}>
-                <ActionBtn label="Verify Payment" icon="checkmark-circle" onPress={() => verifySponsorPayment(pm._id)} color={COLORS.success} bgColor={COLORS.successLight} />
-              </View>
-            )}
-          </View>
-        ))}
-        {sponsorPayments.length === 0 && <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: 13, color: COLORS.gray[400], textAlign: 'center', paddingVertical: 20 }}>No payments yet.</Text>}
-      </SectionCard>
-    </>
-  );
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.gray[50] }}>
       <StatusBar style="light" backgroundColor={COLORS.primary} />
@@ -454,7 +331,7 @@ export default function AdminDashboard() {
         {loading ? (
           <View style={{ paddingVertical: 60, alignItems: 'center' }}><ActivityIndicator size="large" color={COLORS.primary} /><Text style={{ fontFamily: 'Poppins_400Regular', color: COLORS.gray[400], marginTop: 12 }}>Loading dashboard data...</Text></View>
         ) : (
-          <>{activeTab === 'overview' && renderOverview()}{activeTab === 'users' && renderUsers()}{activeTab === 'events' && renderEvents()}{activeTab === 'volunteers' && renderVolunteers()}{activeTab === 'bookings' && renderBookings()}{activeTab === 'sponsorships' && renderSponsorships()}</>
+          <>{activeTab === 'overview' && renderOverview()}{activeTab === 'users' && renderUsers()}{activeTab === 'events' && renderEvents()}{activeTab === 'volunteers' && renderVolunteers()}{activeTab === 'bookings' && renderBookings()}</>
         )}
       </ScrollView>
     </SafeAreaView>
